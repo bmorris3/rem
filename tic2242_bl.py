@@ -60,6 +60,8 @@ target_lc = phot_results.fluxes[:, 0, min_std]
 y = np.linalg.lstsq(regressors, target_lc)[0]
 comp_lc = regressors @ y
 
+np.save('outputs/20190829_z.npy', target_lc / comp_lc)
+
 fig, ax = plt.subplots(4, 1, figsize=(10, 5))
 ax[0].plot(phot_results.times, target_lc / comp_lc, '.')
 ax[1].set_ylabel('X')

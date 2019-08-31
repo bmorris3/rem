@@ -123,6 +123,11 @@ def photometry(image_paths, master_dark_path, master_flat_path, star_positions,
 
                 # Measure stellar centroid with 2D gaussian fit
                 x_stamp_centroid, y_stamp_centroid = centroid_com(image_stamp - np.nanmedian(image_stamp))
+                # if (x_stamp_centroid < 0 or y_stamp_centroid < 0 or
+                #         x_stamp_centroid > 2*centroid_stamp_half_width or
+                #         y_stamp_centroid > 2*centroid_stamp_half_width):
+                #     x_stamp_centroid = centroid_stamp_half_width
+                #     y_stamp_centroid = centroid_stamp_half_width
                 y_centroid = x_stamp_centroid + init_x - centroid_stamp_half_width
                 x_centroid = y_stamp_centroid + init_y - centroid_stamp_half_width
 
@@ -148,23 +153,16 @@ def photometry(image_paths, master_dark_path, master_flat_path, star_positions,
 
             for k, aperture_radius in enumerate(aperture_radii):
                 target_apertures = CircularAperture(positions, aperture_radius)
-                background_annuli = CircularAnnulus(positions,
-                                                    r_in=aperture_radius +
-                                                         aperture_annulus_radius,
-                                                    r_out=aperture_radius +
-                                                          2 * aperture_annulus_radius)
-                flux_in_annuli = aperture_photometry(imagedata,
-                                                     background_annuli)['aperture_sum'].data
-                background = flux_in_annuli/background_annuli.area
+
                 flux = aperture_photometry(imagedata,
                                            target_apertures)['aperture_sum'].data
+                # print(flux)
+                # import matplotlib.pyplot as plt
+                # plt.imshow(imagedata)
+                # target_apertures.plot(color='w')
+                # plt.show()
 
                 background_subtracted_flux = flux
-
-                # background_subtracted_flux = (flux - background *
-                #                               target_apertures.area)
-                #
-                # print(background_subtracted_flux, exposure_duration)
 
                 fluxes[i, :, k] = background_subtracted_flux/exposure_duration
                 errors[i, :, k] = np.sqrt(flux)
