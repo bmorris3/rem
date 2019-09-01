@@ -123,11 +123,11 @@ def photometry(image_paths, master_dark_path, master_flat_path, star_positions,
 
                 # Measure stellar centroid with 2D gaussian fit
                 x_stamp_centroid, y_stamp_centroid = centroid_com(image_stamp - np.nanmedian(image_stamp))
-                # if (x_stamp_centroid < 0 or y_stamp_centroid < 0 or
-                #         x_stamp_centroid > 2*centroid_stamp_half_width or
-                #         y_stamp_centroid > 2*centroid_stamp_half_width):
-                #     x_stamp_centroid = centroid_stamp_half_width
-                #     y_stamp_centroid = centroid_stamp_half_width
+                if (x_stamp_centroid < 0 or y_stamp_centroid < 0 or
+                        x_stamp_centroid > 2*centroid_stamp_half_width or
+                        y_stamp_centroid > 2*centroid_stamp_half_width):
+                    x_stamp_centroid = centroid_stamp_half_width
+                    y_stamp_centroid = centroid_stamp_half_width
                 y_centroid = x_stamp_centroid + init_x - centroid_stamp_half_width
                 x_centroid = y_stamp_centroid + init_y - centroid_stamp_half_width
 

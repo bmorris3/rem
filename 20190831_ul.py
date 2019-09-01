@@ -9,8 +9,8 @@ from toolkit import (photometry, transit_model_b,
                      PhotometryResults, PCA_light_curve, params_b)
 
 # Image paths
-image_paths = sorted(glob('/Users/brettmorris/data/rem/20190829/IMG*UR*.fits'))
-master_flat_path = 'outputs/master_flat_s_201906_UR_g_1s_norm.fits'
+image_paths = sorted(glob('/Users/brettmorris/data/rem/20190831/IMG*UL*.fits'))[:-1]
+master_flat_path = 'outputs/master_flat_s_201906_UL_i_1s_norm.fits'
 master_dark_path = 'outputs/masterdark.fits'
 
 # dark = np.zeros_like(fits.getdata(image_paths[0]))
@@ -18,14 +18,14 @@ master_dark_path = 'outputs/masterdark.fits'
 
 # Photometry settings
 aperture_radii = np.arange(15, 30)
-centroid_stamp_half_width = 10
+centroid_stamp_half_width = 20
 psf_stddev_init = 2
 aperture_annulus_radius = 50
 transit_parameters = params_b
-star_positions = [[546, 675],
-                  [757, 640]]
-output_path = 'outputs/20190829ur.npz'
-force_recompute_photometry = False #True
+star_positions = [[453, 523],
+                  [700, 514]] #[268, 621]]
+output_path = 'outputs/20190831ul.npz'
+force_recompute_photometry = True
 
 # Do photometry:
 
@@ -40,31 +40,31 @@ if not os.path.exists(output_path) or force_recompute_photometry:
 else:
     phot_results = PhotometryResults.load(output_path)
 
-# print('Calculating PCA...')
+stds = []
+lcs = []
+for ap in range(phot_results.fluxes.shape[2]):
+    regressors = np.vstack([phot_results.fluxes[:, 1, ap],
+                            phot_results.xcentroids[:, 0] - phot_results.xcentroids[:, 0].mean(),
+                            phot_results.ycentroids[:, 0] - phot_results.ycentroids[:, 0].mean(),
+                            phot_results.airmass,
+                            phot_results.background_median]).T
 
-lcs = (phot_results.fluxes[:, 0, :]/phot_results.fluxes[:, 1, :])
-norm_lcs = lcs / np.median(lcs, axis=0)
-min_std = np.argmin(mad_std(norm_lcs, axis=0))
+    target_lc = phot_results.fluxes[:, 0, ap]
 
-# plt.plot(phot_results.times, lcs[:, min_std], '.')
-# plt.show()
+    y = np.linalg.lstsq(regressors, target_lc, rcond=None)[0]
+    comp_lc = regressors @ y
+    lc = target_lc/comp_lc
+    stds.append(mad_std(lc))
+    lcs.append(lc)
 
+best_ap = np.argmin(stds)
+best_lc = lcs[best_ap]
 
-regressors = np.vstack([phot_results.fluxes[:, 1, min_std],
-                        phot_results.xcentroids[:, 0] - phot_results.xcentroids[:, 0].mean(),
-                        phot_results.ycentroids[:, 0] - phot_results.ycentroids[:, 0].mean(),
-                        phot_results.airmass,
-                        phot_results.background_median]).T
-
-target_lc = phot_results.fluxes[:, 0, min_std]
-
-y = np.linalg.lstsq(regressors, target_lc)[0]
-comp_lc = regressors @ y
-
-np.save('outputs/20190829_g.npy', target_lc / comp_lc)
+np.save('outputs/20190831_i.npy', best_lc)
+np.save('outputs/20190831_times.npy', phot_results.times)
 
 fig, ax = plt.subplots(4, 1, figsize=(10, 5))
-ax[0].plot(phot_results.times, target_lc / comp_lc, '.')
+ax[0].plot(phot_results.times, best_lc, '.')
 ax[1].set_ylabel('X')
 ax[1].plot(phot_results.times, phot_results.xcentroids[:, 0], '.')
 ax[1].plot(phot_results.times, phot_results.xcentroids[:, 1], '.')
@@ -74,7 +74,7 @@ ax[2].plot(phot_results.times, phot_results.ycentroids[:, 0], '.')
 ax[2].plot(phot_results.times, phot_results.ycentroids[:, 1], '.')
 
 ax[3].set_ylabel('Flux')
-ax[3].plot(phot_results.times, phot_results.fluxes[:, 0, min_std], '.')
-ax[3].plot(phot_results.times, phot_results.fluxes[:, 1, min_std], '.')
+ax[3].plot(phot_results.times, phot_results.fluxes[:, 0, best_ap], '.')
+ax[3].plot(phot_results.times, phot_results.fluxes[:, 1, best_ap], '.')
 plt.show()
 
