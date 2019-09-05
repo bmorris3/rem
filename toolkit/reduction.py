@@ -93,7 +93,7 @@ def photometry(image_paths, master_dark_path, master_flat_path, star_positions,
             exposure_duration = imageheader['EXPTIME']
             times[i] = Time(imageheader['DATE-OBS'], format='isot').jd # scale=imageheader['TIMESYS'].lower()
             medians[i] = np.median(imagedata)
-            airmass[i] = imageheader['AIRMASS']
+            airmass[i] = imageheader.get('AIRMASS', 0)
             # airpress[i] = imageheader['AIRPRESS']
             # humidity[i] = imageheader['HUMIDITY']
             # telfocus[i] = imageheader['TELFOCUS']
@@ -156,12 +156,10 @@ def photometry(image_paths, master_dark_path, master_flat_path, star_positions,
 
                 flux = aperture_photometry(imagedata,
                                            target_apertures)['aperture_sum'].data
-                # print(flux)
                 # import matplotlib.pyplot as plt
                 # plt.imshow(imagedata)
                 # target_apertures.plot(color='w')
                 # plt.show()
-
                 background_subtracted_flux = flux
 
                 fluxes[i, :, k] = background_subtracted_flux/exposure_duration

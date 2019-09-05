@@ -9,23 +9,27 @@ from toolkit import (photometry, transit_model_b,
                      PhotometryResults, PCA_light_curve, params_b)
 
 # Image paths
-image_paths = sorted(glob('/Users/brettmorris/data/rem/20190829/IMG*UL*.fits'))
-master_flat_path = 'outputs/master_flat_s_201906_UL_i_1s_norm.fits'
-master_dark_path = 'outputs/masterdark.fits'
+image_paths = sorted(glob('/Users/brettmorris/git/tic224283342/data/minerva_20190817/MDwarf-*i45.fit'))[:112]
+dark_30s_paths = glob('/Users/brettmorris/git/tic224283342/data/minerva_20190817/MDwarf-*dark.*.fit')
+master_flat_path = '/Users/brettmorris/git/tic224283342/data/masterflat_minerva.fits'
+master_dark_path = '/Users/brettmorris/git/tic224283342/data/masterdark_minerva.fits'
 
+# from astropy.io import fits
 # dark = np.zeros_like(fits.getdata(image_paths[0]))
 # fits.writeto(master_dark_path, dark)
 
+# flat = np.ones_like(fits.getdata(image_paths[0]))
+# fits.writeto(master_flat_path, flat)
+
 # Photometry settings
-aperture_radii = np.arange(15, 30)
-centroid_stamp_half_width = 3
+aperture_radii = np.arange(5, 20)
+centroid_stamp_half_width = 40
 psf_stddev_init = 2
 aperture_annulus_radius = 50
 transit_parameters = params_b
-star_positions = [[539, 665],
-                  [756, 619]] #[268, 621]]
-output_path = 'outputs/20190829ul.npz'
-force_recompute_photometry = False #True
+star_positions = np.loadtxt('outputs/minerva.reg')
+output_path = 'outputs/minerva_i1.npz'
+force_recompute_photometry = False # True
 
 # Do photometry:
 
@@ -43,11 +47,12 @@ else:
 stds = []
 lcs = []
 for ap in range(phot_results.fluxes.shape[2]):
-    regressors = np.vstack([phot_results.fluxes[:, 1, ap],
-                            phot_results.xcentroids[:, 0], # - phot_results.xcentroids[:, 0].mean(),
-                            phot_results.ycentroids[:, 0], # - phot_results.ycentroids[:, 0].mean(),
+    regressors = np.vstack([phot_results.fluxes[:, 1:, ap].T,
+                            phot_results.xcentroids[:, 0] - phot_results.xcentroids[:, 0].mean(),
+                            phot_results.ycentroids[:, 0] - phot_results.ycentroids[:, 0].mean(),
                             phot_results.airmass,
-                            phot_results.background_median]).T
+                            phot_results.background_median
+                            ]).T
 
     target_lc = phot_results.fluxes[:, 0, ap]
 
@@ -57,14 +62,11 @@ for ap in range(phot_results.fluxes.shape[2]):
     stds.append(mad_std(lc))
     lcs.append(lc)
 
-plt.plot(aperture_radii, stds)
-plt.show()
-
 best_ap = np.argmin(stds)
 best_lc = lcs[best_ap]
 
-np.save('outputs/20190829_i.npy', best_lc)
-np.save('outputs/20190829_times.npy', phot_results.times)
+np.save('outputs/minerva_i1.npy', np.vstack([phot_results.times, best_lc]).T)
+
 
 fig, ax = plt.subplots(4, 1, figsize=(10, 5))
 ax[0].plot(phot_results.times, best_lc, '.')
@@ -78,6 +80,6 @@ ax[2].plot(phot_results.times, phot_results.ycentroids[:, 1], '.')
 
 ax[3].set_ylabel('Flux')
 ax[3].plot(phot_results.times, phot_results.fluxes[:, 0, best_ap], '.')
-ax[3].plot(phot_results.times, phot_results.fluxes[:, 1, best_ap], '.')
+ax[3].plot(phot_results.times, phot_results.fluxes[:, 1:, best_ap], '.')
 plt.show()
 
